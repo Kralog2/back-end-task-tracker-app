@@ -18,8 +18,9 @@ export async function listUsers() {
 }
 
 export async function getUserById(id) {
+  const objectId = ObjectId.isValid(id) ? new ObjectId(id) : null;
   const db = getDB();
-  return await db.collection(COLLECTION).findOne({ _id: new ObjectId(id) });
+  return await db.collection(COLLECTION).findOne({ _id: objectId });
 }
 
 export async function getUserByName(name) {

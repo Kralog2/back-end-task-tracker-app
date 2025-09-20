@@ -1,3 +1,4 @@
+import { ObjectId } from "mongodb";
 import {
   deleteUserById,
   getUserById,
@@ -16,25 +17,32 @@ export async function getAllUsers(req, res) {
 
 export async function getUser(req, res) {
   try {
-    const user = await getUserById(req.params.id);
+    const id = req.user && ObjectId.isValid(req.user._id) ? req.user._id : null;
+    const user = await getUserById(id);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
-    if (req.user.role !== "admin" && req.user._id !== user._id.toString()) {
+    if (req.user.role !== "admin" && id !== user._id.toString()) {
       return res.status(403).json({ error: "Access denied." });
     }
 
-    res.json({ id: user._id, username: user.username, role: user.role });
+    res.json({
+      id: user._id,
+      username: user.username,
+      role: user.role,
+      passwordHash: undefined,
+    });
   } catch {
     res.status(500).json({ error: "Error fetching user." });
   }
 }
 
 export async function editUserRole(req, res) {
+  const roles = ["user", "admin"];
   try {
     const { role } = req.body;
-    if (!role) {
-      return res.status(400).json({ error: "Rol requerido" });
+    if (!role || !roles.includes(role)) {
+      return res.status(400).json({ error: "Rol required." });
     }
     const updatedUser = await updateUserRole(req.params.id, role);
     res.json({
@@ -42,6 +50,7 @@ export async function editUserRole(req, res) {
       username: updatedUser.username,
       email: updatedUser.email,
       role: updatedUser.role,
+      passwordHash: undefined,
     });
   } catch {
     res.status(500).json({ error: "Error updating rol." });
@@ -50,7 +59,9 @@ export async function editUserRole(req, res) {
 
 export async function deleteUser(req, res) {
   try {
-    await deleteUserById(req.params.id);
+    const id =
+      req.params.id && ObjectId.isValid(req.params.id) ? req.params.id : null;
+    await deleteUserById(id);
     res.json({ message: "User deleted." });
   } catch {
     res.status(500).json({ error: "Error deleting user." });

@@ -25,18 +25,19 @@ export async function register(req, res) {
     const passwordHash = await bcrypt.hash(data.user.password, SALT_ROUNDS);
     const newUser = {
       username: data.user.username,
-      passwordHash: passwordHash,
+      passwordHash,
       role: data.user.role || "user",
       createdAt: new Date(),
     };
     const user = await createUser(newUser);
+    const {passwordHash: _, ...usersafe} = user;
     res.status(201).json({
-      message: "User registered.",
-      user: { ...user, passwordHash: undefined },
+      message: "User registered",
+      user: usersafe,
     });
-  } catch {
+  } catch (error) {
     res.status(500).json({
-      error: "There was an error processing your request. Try again.",
+      error: "Error has occurred.",
     });
   }
 }
@@ -53,24 +54,21 @@ export async function login(req, res) {
     const user = await getUserByName(data.user.username);
     const match = await bcrypt.compare(data.user.password, user?.passwordHash);
     if (!user || !match) {
-      return res.status(400).json({ error: "Invalid credentials." });
+      return res.status(400).json({ error: "User or password is incorrect." });
     }
-    const payload = { id: user._id, role: user.role };
+    const payload = { id: user._id.toString(), role: user.role };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
+    const {passwordHash: _, ...usersafe} = user;
     res.json({
+      message: "Login successful",
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        role: user.role,
-        passwordHash: undefined,
-      },
+      user: usersafe,
     });
   } catch (error) {
     res.status(500).json({
       message: error,
-      error: "There was an error processing your request. Try again.",
+      error: "Error has occurred.",
     });
   }
 }
@@ -78,14 +76,18 @@ export async function login(req, res) {
 export async function me(req, res) {
   try {
     const id = req.user && ObjectId.isValid(req.user._id) ? req.user._id : null;
+    if (!id) {
+      return res.status(401).json({ error: "Unauthorized." });
+    }
     const user = await getUserById(id);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
-    res.json({ ...user, passwordHash: undefined });
-  } catch {
+    const {passwordHash: _, ...usersafe} = user;
+    res.json({ user: usersafe });
+  } catch (error) {
     res.status(500).json({
-      error: "There was an error processing your request. Try again.",
+      error: "Error has occurred.",
     });
   }
 }

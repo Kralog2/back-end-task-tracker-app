@@ -8,6 +8,7 @@ export const setupSecurity = (app) => {
     origin: process.env.CORS_ORIGIN || "http://localhost:3000",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   }));
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,

@@ -11,6 +11,7 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 setupSecurity(app);
+app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);

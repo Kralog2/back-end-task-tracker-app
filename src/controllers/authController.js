@@ -59,12 +59,18 @@ export async function login(req, res) {
     const payload = { id: user._id.toString(), role: user.role };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-    const {passwordHash: _, ...usersafe} = user;
-    res.json({
-      message: "Login successful",
-      token,
-      user: usersafe,
-    });
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      path: "/",
+    };
+
+    res.cookie("token", token, cookieOptions);
+
+    const { passwordHash: _, ...safeUser } = user;
+    res.json({ user: safeUser });
   } catch (error) {
     res.status(500).json({
       message: error,
@@ -72,6 +78,22 @@ export async function login(req, res) {
     });
   }
 }
+
+export async function logout(req, res) {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+    res.json({ message: "Logged out successfully." });
+  } catch (err) {
+    console.error("Logout error:", err);
+    res.status(500).json({ error: "Could not logout." });
+  }
+}
+
 
 export async function me(req, res) {
   try {
